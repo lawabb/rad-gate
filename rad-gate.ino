@@ -5,22 +5,28 @@
 
  /********************************************
  *  Notes: 
- *  To use relays for light control, ground
- *  pin 3.
- *  Relays should be connected to A0,A1,A2,A3
+ *  Edit constants.h and constants.cpp to set 
+ *  various configuration options
+ *  
  *********************************************/
 
 #include <SoftwareSerial.h>
 #include "constants.h"
 #include "utility.h"
-#include "AudioFX.h"
 #include "LightTree.h"
 #include "Gate.h"
 #include "Sequence.h"
+#include "Display.h"
 #include <JQ6500_Serial.h>
 
 // declarations
-bool buttonPressed = 0;
+bool buttonPressed = false;
+bool got_interrupt1 = false;
+bool do_end_seq = false;
+uint32_t intpt1_time = 0;
+uint32_t lastButtonPress = 0;
+
+Gate gate = Gate();
 
 #ifdef HARDWARE_SOUNDBOARD_ADAFRUIT
   SoftwareSerial ss = SoftwareSerial(PIN_SFX_TX, PIN_SFX_RX);
@@ -28,39 +34,19 @@ bool buttonPressed = 0;
   AudioFX audioFX = AudioFX(&sfx);
 #endif
 #ifdef HARDWARE_SOUNDBOARD_JQ6500
-  JQ6500_Serial mp3(PIN_SFX_TX,PIN_SFX_RX);
-  AudioFX audioFX = AudioFX(&mp3);
+  JQ6500_Serial mp3(PIN_SFX_TX, PIN_SFX_RX);
+  AudioFX audioFX = AudioFX(&mp3, &gate);
 #endif
 
-Gate gate = Gate();
 LightTree lighttree = LightTree();
-Sequence sequence = Sequence(&gate,&audioFX,&lighttree);
-unsigned long lastButtonPress = 0;
+Display display = Display();
+Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
 
-// interrrupt handler
-void Interrupt1()
+
+void setup() 
 {
-  if (gate.is_sequence_running()) {
-    if ((millis() - lastButtonPress) > 1000) {
-      serial_print("Interrupt triggered - button press");
-      if (gate.is_abortable()) {
-        serial_print_val("Interrupt triggered - abort request received",(millis() - lastButtonPress));
-        lighttree.abort();
-        gate.abort();
-      }
-      else {
-        serial_print("Interrupt triggered - abort request ignored");
-      }
-    }
-    else {
-      serial_print("Interrupt ignored - button press");
-    }
-  }
-}
-
-void setup() {
-
-  Serial.begin(19200);
+  Serial.begin(115200);
+  serial_print(VERSION);
 
   #ifdef HARDWARE_SOUNDBOARD_ADAFRUIT
     ss.begin(9600);
@@ -70,63 +56,115 @@ void setup() {
   #ifdef HARDWARE_SOUNDBOARD_JQ6500
     mp3.begin(9600);
     mp3.reset();
-    mp3.setVolume(25);
+    mp3.setVolume(SFX_VOLUME);
     mp3.setLoopMode(MP3_LOOP_NONE);
     serial_print("JQ6500 initialised");
   #endif
 
-  pinMode(LED_BUILTIN, OUTPUT);
+  // pinMode(LED_BUILTIN, OUTPUT);
   pinMode(PIN_LED_ACTIVE, OUTPUT);
   pinMode(PIN_SPEAKER, OUTPUT);
   pinMode(PIN_BUTTON_GO, INPUT);
   pinMode(PIN_RELAY, OUTPUT);
-  //pinMode(PIN_REED_SWITCH, INPUT_PULLUP);
-  pinMode(PIN_LIGHT_TREE_RELAY_ENABLE, INPUT_PULLUP);
+  pinMode(PIN_ANA_VIN, INPUT);
+  pinMode(PIN_BAT_MON, INPUT);
+  pinMode(PIN_SENSOR, INPUT_PULLUP);
 
-  // not working? not needed?
-  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt1, HIGH);
-  digitalWrite(PIN_RELAY, HIGH); // turn on magnet
+  // Add more randomness otherwise uses same sequence on each startup
+  randomSeed(analogRead(PIN_ANA_VIN));
 
-  if (digitalRead(PIN_LIGHT_TREE_RELAY_ENABLE) == LOW) {
-    lighttree.initialise(true, PIN_LIGHT_TREE_RELAY_ENABLE);
-    serial_print("Light tree configured for relay control");
-  } else {
-    lighttree.initialise(false, PIN_NEO_PIXEL);
-    serial_print("Light tree configured for serial control");
-  }
+  // Use interrupt0 to catch ABORT request from GO button
+  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt0, HIGH);
+  
+  // Use Interrupt1 from light beam trigger for reaction time measurement
+  attach_interrupt1();
 
-  serial_print("Gate controller initialised");
-  serial_print(VERSION);
-  delay(100);
-  lighttree.led_reset();
+  // ensure solenoid or magnet is in default condition
+  digitalWrite(PIN_RELAY, !GATE_ACTIVE_LEVEL);
+  
+  lighttree.initialise();
   lighttree.ready();
+
+  // 4 digit LED display
+  //set pins to output for setting the shift register
+  pinMode(PIN_DISPLAY_LATCH, OUTPUT);
+  pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
+  pinMode(PIN_DISPLAY_DATA, OUTPUT); 
+
+  // Display start message " rAd"
+  uint8_t nameArray[] = {11, 13, 14, 15};
+  display.setDisplay(nameArray, 0, 4);
+
+  // Play 'ready to roll' tones
   audioFX.play_power_on();
+  
+  //serial_print("Initialised");
+  serial_print("Waiting for GO Button..");
 }
 
-void loop() {
+void Interrupt0()
+{
+  if (gate.is_sequence_running()) {
+    if ((millis() - lastButtonPress) > 1000) {
+      if (gate.is_abortable()&& !gate.is_aborted()) { 
+        gate.abort();  // also causes audio play to stop
+        lighttree.abort();                               
+      }
+    }   
+  }
+} 
 
+void Interrupt1()
+{
+  if (FLAG_GATE_DOWN && !got_interrupt1) {
+    // detach interupt to prevent retrigger - attach again in main loop() on rerun
+    // run end_seq() from main loop as is problematic from here
+    intpt1_time = millis();
+    detachInterrupt(1);
+    got_interrupt1 = true;
+    do_end_seq = true;
+  }  
+}
+
+void attach_interrupt1() {
+  attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), Interrupt1, LOW);
+}
+
+void loop()
+{
   if (digitalRead(PIN_BUTTON_GO) == LOW) {
     //serial_print("LOW");
     buttonPressed = 0; // reset
   }
-  else if (digitalRead(PIN_BUTTON_GO) == HIGH)
-  {
-    serial_print("HIGH");
-    if (gate.is_sequence_running()) {
-      serial_print("ABORT");
-      lighttree.abort();
-      gate.abort();
-      lighttree.led_reset();
-    }
-    else {
-      serial_print("SEQUENCE NOT RUNNING");
-    }
-    // only fire the button press action once
+  else if (digitalRead(PIN_BUTTON_GO) == HIGH) {
+    serial_print("GO!");
     if (!buttonPressed) {
       buttonPressed = 1;
       lastButtonPress = millis();
-      serial_print_val("Sequence start - lastButtonPress val", lastButtonPress);
+      // serial_print_val("Sequence start - lastButtonPress val", lastButtonPress);
+      FLAG_GATE_DOWN = false;
+      got_interrupt1 = false;
+      attach_interrupt1();
       sequence.begin_sequence();
-    } // else still holding button
+    }
+  }
+  if (do_end_seq) {
+    do_end_seq = false;
+    sequence.end_seq(intpt1_time - GATE_DROP_START);
+  }
+  // TODO some testing to get right
+  // Set jumper on board to 5V to stop alarms
+  //serial_print_val("Battery Alarm set at Voltage (mV) ", BAT_ALARM_VOLTS);
+  //int v = (PIN_BAT_MON)*55.0/1.023;
+  //Serial.println(v);
+  //display.displayNumber(v, 0, 2);
+  //delay(4000);
+  while (analogRead(PIN_BAT_MON) < 1.023*BAT_ALARM_VOLTS/55) {    // 100K - 10K voltage divider on IP
+      //serial_print_val("Battery volatage is (mV)", analogRead(PIN_BAT_MON)*55.0/1.023);
+      audioFX.stop_play();
+      delay(500);
+      audioFX.play_sound_sample(SFX_LOW_BAT_ALM);
+      delay(10000);
+      
   }
 }

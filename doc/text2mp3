@@ -1,0 +1,27 @@
+#/usr/bin/sh
+
+if [ $# -eq 0 ]; then
+    echo "Please input text to be converted to mp3 after the text2mp3  command"
+    echo " Ensure ffmpeg, espeak and libmp3lame are installed"
+    echo "e.g:  $ text2mp3 type something here including spaces"
+    exit 1
+fi
+
+str="'$*'"
+#echo $str
+
+echo $str | espeak -w temp.wav
+
+ffmpeg -y -nostats -loglevel error -i temp.wav -ac 1 -ar 16000 -ab 128000 -c:a pcm_u8 temp.wav
+
+old="$IFS"
+IFS='_'
+str2="$*"
+#echo $str2
+IFS=$old
+
+#echo "ffmpeg -nostats -loglevel error -i temp.wav -codec:a libmp3lame -q:a 6 $str2.mp3"
+ffmpeg -nostats -loglevel error -i temp.wav -codec:a libmp3lame -q:a 6 $str2.mp3
+
+rm temp.wav
+

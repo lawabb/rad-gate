@@ -1,0 +1,109 @@
+AudioFX.cpp
+
+ /*
+NOTE - for some annoying reason, serial transmission
+from the JQ6500 causes interference while audio is playing.
+ We need to use the method below (passing in playtime) to
+finish playing when the track finishes. It is a crap way to do
+it, but for $3 for a JQ6500, I can live with it.
+
+ L.A: I don't get any noise on JQ6500 - only problem is get a long delay for each getStatus()
+so is useless for accurate timing.  Plus cannot abort on demand. Have made some
+changes to get timing per UCI documentation and make abort happen asap. Should be correct as long as mp3s are
+within length spec. See Doc folder for good mp3s. Still using modified pass in time
+method and wait for expiry..
+Adafruit soundboard untested
+    
+FOR_INFO: jfx->getStatus()  //0x00 , 0x01, 0x02 Stopped/Playing/Paused
+  */
+  
+  Display.cpp
+  /* MyNotes:
+ Hacked from Demonstration Arduino sketch for four digit, seven segment display with enclosure
+ http://tronixlabs.com/display/led/numeric/four-digit-seven-segment-display-module-and-enclosure/
+
+ https://www.ebay.com.au/itm/New-4-Digit-7-Seven-Segment-LED-Display-Controller-5V-Red-Arduino-Compatible/161771456558?ssPageName=STRK%3AMEBIDX%3AIT&_trksid=p2060353.m1438.l2649
+
+int PIN_DISPLAY_LATCH = 13;   // connect to LCK pin    ST_CP of 74HC595  STorage register clock input
+int PIN_DISPLAY_CLOCK = 12;   // connect to CLK pin    SH_CP of 74HC595 Shift register clock input
+int PIN_DISPLAY_DATA = 11;    // connect to SDI pin    DS of 74HC595  Serial Data Input
+
+ 
+ hex number represents binary conditions of segments a, b, c ,d, e ,f, g, dp in that order
+ segment designations start on top horizontal segement (a) and follow around in clockwise direction
+ followed by centre (g) and lastly decimal point (dp)
+ eg minus sign would be just middle segment g . = 0000 0010 or 0x02
+ eg A would be all but d and dp = 1110 1110 or 0xee
+
+
+ int LED_SEG_TAB[]={
+  0xfc,0x60,0xda,0xf2,0x66,0xb6,0xbe,0xe0,0xfe,0xf6,0x01,0xee,0x3e,0x1a,0x7a,0x9e,0x8e,0x00};
+  0     1    2     3    4    5    6    7    8    9   .    A    b    c    d    E    F   off
+  
+    //serial_print_val("Digit = ",  digits[y]);
+    //if (!(dp == 0 || (dp-1) != y)) {
+    //   serial_print_val("Dec point = ",   (!(dp == 0 || (dp-1) != y)));
+    //}
+
+void setup() 
+{
+  //set pins to output so you can control the shift register
+  pinMode(PIN_DISPLAY_LATCH, OUTPUT);
+  pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
+  pinMode(PIN_DISPLAY_DATA, OUTPUT);
+}
+ shiftOut(PIN_DISPLAY_DATA, PIN_DISPLAY_CLOCK, LSBFIRST, LED_SEG_TAB[3]+1);  // +1 is for decimal point (segment h)
+ 
+   // leadingZero = 1 means show leading zeros
+  // dp = 1 -> 4 sets decimal point  MSB -> LSB
+  // eg. dp = 4 sets LSB decimal point on
+  // leave dp = 0 or  blank for no decimal point
+*/
+
+LightTree.cpp
+ /* LA 2018-04-03 
+  * Changed to FastLED due to RGB GRB confusion. Allows for  some code cleanup
+  * Possibly can use other LED options also
+  * Tested with NeoPixel clone, and relay outs
+  */
+
+Sequence.cpp
+ /**************************************************
+  Action Plan for the latter part of sequence
+
+ ItemTime(ms)Action1  Action2          Action3
+  0    0     Set LED1  Play Tone 632 
+  1   60               Stop Tone 
+  2  120     Set LED2  Play Tone 632 
+  3  180               Stop Tone 
+  4  240     Set LED3  Play Tone 632 
+  5  300               Stop Tone 
+  6  360     Set LED4  Play Tone 632   Gate Activate
+  7  660                               Gate Deactivate
+  8 2610    Reset LEDS  Stop Tone
+  *****************************************************/
+  
+  Contants.h
+   /*
+For my reference - My Pins Used 
+0
+1
+PIN_BUTTON_GO 2
+PIN_SENSOR 3
+PIN_LED_ACTIVE 4
+5
+PIN_DISPLAY_LATCH 6
+PIN_DISPLAY_CLOCK 7
+PIN_RELAY 8
+PIN_SFX_RX  9
+PIN_SFX_TX 10
+PIN_SPEAKER 11
+PIN_DISPLAY_DATA 12
+PIN_LED 13
+PIN_LIGHT_TREE_RELAY_1  14
+PIN_LIGHT_TREE_RELAY_2  15
+PIN_LIGHT_TREE_RELAY_3  16
+PIN_LIGHT_TREE_RELAY_4  17
+PIN_BAT_MON 18
+PIN_ANA_VIN 19
+*/

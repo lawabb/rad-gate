@@ -32,17 +32,6 @@ void serial_print_val(const char* print_string, unsigned long print_val) {
     }
 }
 
-// LED light chase
-//  c               colour
-void chase(Adafruit_NeoPixel strip, uint32_t c) {
-  for(uint16_t i=0; i<strip.numPixels()+4; i++) {
-      strip.setPixelColor(i  , c); // Draw new pixel
-      strip.setPixelColor(i-4, 0); // Erase pixel a few steps back
-      strip.show();
-      delay(50);
-  }
-}
-
 // clever print function
 //https://gist.github.com/EleotleCram/eb586037e2976a8d9884
 int aprintf(char *str, ...) {

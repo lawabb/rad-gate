@@ -3,169 +3,120 @@
  *  (c) Danny Frencham 2017
  *****************************************/
 
-#include <Adafruit_NeoPixel.h>
 #include "constants.h"
 #include "LightTree.h"
+#include <FastLED.h>
 
-int rgbMode = 0;
-bool modeRelay = false;
+#if LIGHT_TREE_STRIP
+CRGB leds[NUM_LEDS];
+#endif
 
 LightTree::LightTree() { }
 
-void LightTree::initialise(bool useRelays, int pin) {
-  if (useRelays) {
-    modeRelay = useRelays;
+void LightTree::initialise() { 
+  #if (LIGHT_TREE_STRIP)
+    serial_print("Init Light Strip");
+    delay( 3000 ); // power-up safety delay
+    FastLED.addLeds<LED_TYPE, PIN_LED, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+    FastLED.show();
+    FastLED.setBrightness(BRIGHTNESS); 
+  #endif
+  #if (LIGHT_TREE_RELAY_ENABLE)
+    serial_print("Init Light Relays");
     pinMode(PIN_LIGHT_TREE_RELAY_1, OUTPUT);
     pinMode(PIN_LIGHT_TREE_RELAY_2, OUTPUT);
     pinMode(PIN_LIGHT_TREE_RELAY_3, OUTPUT);
     pinMode(PIN_LIGHT_TREE_RELAY_4, OUTPUT);
-    led_reset();
-  } 
-  else 
-  {
-    #ifdef HARDWARE_NEOPIXEL_RGB
-      _strip = Adafruit_NeoPixel(8, pin, NEO_GRB + NEO_KHZ800);
-      // need to use different colours for RGB stick
-      rgbMode = 1;
-    #endif
-    #ifdef HARDWARE_NEOPIXEL_RGBW
-      _strip = Adafruit_NeoPixel(8, pin, NEO_RGBW + NEO_KHZ800);
-    #endif
-
-    _strip.begin();
-    // _strip.setBrightness(100); dull
-    _strip.setBrightness(255); // blinding
-  }
-}
-
-void LightTree::light_set(int step, Gate* gate) {
-  serial_print_val("Set LED", step);
-  switch (step) {
-    case 1:
-      led_reset();
-      modeRelay ? light_set_relay(step) : light_set_pixel(step);
-      break;
-    case 2:
-    case 3:
-      modeRelay ? light_set_relay(step) : light_set_pixel(step);
-      break;
-    case 4:
-      gate->drop();
-      modeRelay ? light_set_relay(step) : light_set_pixel(step);
-      break;
-     default:
-      led_reset();
-  }
+  #endif 
 }
 
 void LightTree::led_reset() {
-  if (modeRelay) {
-    digitalWrite(PIN_LIGHT_TREE_RELAY_1, HIGH);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_2, HIGH);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_3, HIGH);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_4, HIGH);
-  } else {
+  #if (LIGHT_TREE_RELAY_ENABLE)
+    digitalWrite(PIN_LIGHT_TREE_RELAY_1, !LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_2, !LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_3, !LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_4, !LIGHT_TREE_RELAY_ON);
+  #endif
+  #if (LIGHT_TREE_STRIP)
     for(int i=0;i<8;i++) {
-      _strip.setPixelColor(i,0,0,0,0);
+      leds[i] = CRGB::Black;
     }
-    _strip.show();
-  }
+    FastLED.show();
+  #endif
 }
 
 void LightTree::abort() {
-  if (modeRelay) {
-    //digitalWrite(PIN_LIGHT_TREE_RELAY_1, HIGH);
-    //led_reset();
-    digitalWrite(PIN_LIGHT_TREE_RELAY_1, HIGH);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_2, LOW);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_3, LOW);
-    digitalWrite(PIN_LIGHT_TREE_RELAY_4, HIGH);
-  } else {
-    led_reset();
+  #if (LIGHT_TREE_RELAY_ENABLE)
+    digitalWrite(PIN_LIGHT_TREE_RELAY_1, !LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_2, LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_3, LIGHT_TREE_RELAY_ON);
+    digitalWrite(PIN_LIGHT_TREE_RELAY_4, !LIGHT_TREE_RELAY_ON); 
+  #endif
+  #if (LIGHT_TREE_STRIP)
     for(int i=0;i<8;i++) {
-      _strip.setPixelColor(i,RED);
+        leds[i] = CRGB::Red;
     }
-    _strip.show();
-  }
+    FastLED.show();
+  #endif
 }
 
 void LightTree::ready() {
-  if (modeRelay) {
-    led_reset();
-  } else {
-    led_reset();
-    _strip.setPixelColor(0, BLUE);
-    _strip.show();
-  }
+  led_reset();
+  #if (LIGHT_TREE_STRIP)
+    leds[0] = CRGB::Blue;
+    FastLED.show();
+  #endif
 }
 
 void LightTree::set_status(uint32_t color) {
-  led_reset();
-  _strip.setPixelColor(0, color);
-  _strip.show();
+  #if (LIGHT_TREE_STRIP)
+    leds[0] = color;
+    FastLED.show();
+    //FastLED.setBrightness(BRIGHTNESS); // may be needed if builtin LED affecting
+  #endif  
 }
 
-
-void LightTree::light_set_pixel(int step) {
-  switch (step) {
-    case 1:
-      led_reset();
-      if (rgbMode) {
-        _strip.setPixelColor(6, RGB_RED);
-        _strip.setPixelColor(7, RGB_RED);
-      } else {
-        _strip.setPixelColor(6, RED);
-        _strip.setPixelColor(7, RED);
-      }
-      break;
-    case 2:
-      if (rgbMode) {
-        _strip.setPixelColor(4, RGB_ORANGE);
-        _strip.setPixelColor(5, RGB_ORANGE);
-      } else {
-        _strip.setPixelColor(4, YELLOW);
-        _strip.setPixelColor(5, YELLOW);
-      }
-      break;
-    case 3:
-      if (rgbMode) {
-        _strip.setPixelColor(2, RGB_ORANGE);
-        _strip.setPixelColor(3, RGB_ORANGE);
-      } else {
-        _strip.setPixelColor(2, YELLOW);
-        _strip.setPixelColor(3, YELLOW);
-      }
-      break;
-    case 4:
-      if (rgbMode) {
-        _strip.setPixelColor(0, RGB_GREEN);
-        _strip.setPixelColor(1, RGB_GREEN);
-      } else {
-        _strip.setPixelColor(0, GREEN);
-        _strip.setPixelColor(1, GREEN);
-      }
-      break;
-     default:
-      led_reset();
-  }
-  _strip.show();
-}
-
-void LightTree::light_set_relay(int step) {
-  switch (step) {
-    case 1:
-      digitalWrite(PIN_LIGHT_TREE_RELAY_1, LOW);
-      break;
-    case 2:
-      digitalWrite(PIN_LIGHT_TREE_RELAY_2, LOW);
-      break;
-    case 3:
-      digitalWrite(PIN_LIGHT_TREE_RELAY_3, LOW);
-      break;
-    case 4:
-      digitalWrite(PIN_LIGHT_TREE_RELAY_4, LOW);
-      break;
-     default:
-      led_reset();
-  }
+void LightTree::light_set(int step) {
+  serial_print_val("Set LED ", step);
+  #if (LIGHT_TREE_RELAY_ENABLE)
+    switch (step) {
+      case 1:
+        digitalWrite(PIN_LIGHT_TREE_RELAY_1, LIGHT_TREE_RELAY_ON);
+        break;
+      case 2:
+        digitalWrite(PIN_LIGHT_TREE_RELAY_2, LIGHT_TREE_RELAY_ON);
+        break;
+      case 3:
+        digitalWrite(PIN_LIGHT_TREE_RELAY_3, LIGHT_TREE_RELAY_ON);
+        break;
+      case 4:
+        digitalWrite(PIN_LIGHT_TREE_RELAY_4, LIGHT_TREE_RELAY_ON);
+        break;
+      default:
+        led_reset();
+    }
+  #endif
+  #if (LIGHT_TREE_STRIP)
+    switch (step) {
+      case 1:
+        leds[6] = CRGB::Red;
+        leds[7] = CRGB::Red;
+        break;
+      case 2:
+        leds[4] = CRGB::Orange;
+        leds[5] = CRGB::Orange;    
+        break;
+      case 3:
+        leds[2] = CRGB::Orange;
+        leds[3] = CRGB::Orange;
+        break;
+      case 4:
+        leds[0] = CRGB::Green;
+        leds[1] = CRGB::Green;
+        break;
+      default:
+        led_reset();
+    }
+  FastLED.show();
+  #endif
 }
