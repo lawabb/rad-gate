@@ -72,7 +72,7 @@
 
 // Gate defines
 #define SHORT_PULSE_GATE 1   // 1 for short pulse gate activation. Typically when using solenoid
-#define GATE_ACTIVE_MS 100   // time for solenoid to operate. Only applies if SHORT_GATE_PULSE = 1
+#define GATE_ACTIVE_MS 250   // time for solenoid to operate. Only applies if SHORT_GATE_PULSE = 1
 #define GATE_ACTIVE_LEVEL 1  // Level of ouput pin that causes gate drop. 1 = HIGH = 5V
     
 #define ENABLE_VOICE_CADENCE 1  // Enable voice announcements

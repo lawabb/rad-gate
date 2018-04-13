@@ -100,8 +100,8 @@ void Display::allOff() { // turns off all segments
 void Display::setDisplay(uint8_t digits[], uint8_t dp, int num_digits) {
   // Set the Display from array
   digitalWrite(PIN_DISPLAY_LATCH, LOW);
-  for (int y=0; y<num_digits; y++) {   
-    shiftOut(PIN_DISPLAY_DATA, PIN_DISPLAY_CLOCK, MSBFIRST, LED_SEG_TAB[digits[y]] + (!(dp==0 || (dp-1) != y)));
+  for (int y=num_digits-1; y>=0; y--) {  
+    shiftOut(PIN_DISPLAY_DATA, PIN_DISPLAY_CLOCK, LSBFIRST, LED_SEG_TAB[digits[y]] + (!(dp==0 || (dp-1) != y)));
   }    
   digitalWrite(PIN_DISPLAY_LATCH, HIGH);
 }
