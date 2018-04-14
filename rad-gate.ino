@@ -23,8 +23,10 @@
 bool buttonPressed = false;
 bool got_interrupt1 = false;
 bool do_end_seq = false;
-uint32_t intpt1_time = 0;
+uint32_t interrupt1_time = 0;
 uint32_t lastButtonPress = 0;
+int vdig = 0;
+
 
 Gate gate = Gate();
 
@@ -45,7 +47,7 @@ Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
 
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.begin(SERIAL_RATE);
   serial_print(VERSION);
 
   #ifdef HARDWARE_SOUNDBOARD_ADAFRUIT
@@ -70,13 +72,13 @@ void setup()
   pinMode(PIN_BAT_MON, INPUT);
   pinMode(PIN_SENSOR, INPUT_PULLUP);
 
-  // Add more randomness otherwise uses same sequence on each startup
+  // Add more randomness otherwise uses same random sequence on each startup
   randomSeed(analogRead(PIN_ANA_VIN));
 
   // Use interrupt0 to catch ABORT request from GO button
   attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt0, HIGH);
   
-  // Use Interrupt1 from light beam trigger for reaction time measurement
+  // Use Interrupt1 from light beam trigger input for reaction time measurement
   attach_interrupt1();
 
   // ensure solenoid or magnet is in default condition
@@ -86,7 +88,7 @@ void setup()
   lighttree.ready();
 
   // 4 digit LED display
-  //set pins to output for setting the shift register
+  //set pins to output
   pinMode(PIN_DISPLAY_LATCH, OUTPUT);
   pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
   pinMode(PIN_DISPLAY_DATA, OUTPUT); 
@@ -119,7 +121,7 @@ void Interrupt1()
   if (FLAG_GATE_DOWN && !got_interrupt1) {
     // detach interupt to prevent retrigger - attach again in main loop() on rerun
     // run end_seq() from main loop as is problematic from here
-    intpt1_time = millis();
+    interrupt1_time = millis();
     detachInterrupt(1);
     got_interrupt1 = true;
     do_end_seq = true;
@@ -148,23 +150,39 @@ void loop()
       sequence.begin_sequence();
     }
   }
+
+  // optionally get 'reaction time' value
   if (do_end_seq) {
     do_end_seq = false;
-    sequence.end_seq(intpt1_time - GATE_DROP_START);
+    sequence.end_seq(interrupt1_time - GATE_DROP_START);
   }
-  // TODO some testing to get right
-  // Set jumper on board to 5V to stop alarms
-  //serial_print_val("Battery Alarm set at Voltage (mV) ", BAT_ALARM_VOLTS);
-  //int v = (PIN_BAT_MON)*55.0/1.023;
-  //Serial.println(v);
-  //display.displayNumber(v, 0, 2);
-  //delay(4000);
-  while (analogRead(PIN_BAT_MON) < 1.023*BAT_ALARM_VOLTS/55) {    // 100K - 10K voltage divider on IP
-      //serial_print_val("Battery volatage is (mV)", analogRead(PIN_BAT_MON)*55.0/1.023);
+
+  // Battery monitor
+  // Checks the voltage and if too low gives alarm
+  // Set jumper on board to 5V to stop alarms while testing
+  // Using 100K:10K voltage divider on IP giving  Vin = Vdc/11
+  // Trim the 100K value for accuracy - I used 82K + 50K trimpot
+  // Battery Alarm is set at Voltage (mV) BAT_ALARM_VOLTS
+ 
+  vdig = analogRead(PIN_BAT_MON);
+  // serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023); 
+  // delay(1000);  // add some delay when testing
+  
+  while (vdig < 1.023*BAT_ALARM_VOLTS/55) {    
+      serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023);
+      
+      if (vdig*55.0/1.023 < 10000) {
+        display.displayNumber(vdig*55.0/1.023, 1, 1); //  DP for numbers < 10.00
+      } else {
+        display.displayNumber(vdig*55.0/1.023, 0, 2); //  DP for numbers > 10.00      
+      }
+  
       audioFX.stop_play();
       delay(500);
       audioFX.play_sound_sample(SFX_LOW_BAT_ALM);
-      delay(10000);
+      delay(5000);
+      display.allOff();
+      vdig = analogRead(PIN_BAT_MON);
       
   }
 }
