@@ -10,6 +10,9 @@
 
 #define VERSION "0.8.6"
 
+// Set monitor baud rate
+#define SERIAL_RATE 115200
+
 // Light tree 
 #define LIGHT_TREE_RELAY_ENABLE 1 // set to 1 for RELAY operation
 #if LIGHT_TREE_RELAY_ENABLE
