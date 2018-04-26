@@ -106,6 +106,11 @@ void AudioFX::play_sample(uint8_t track) {
 }
 
 void AudioFX::stop_play() {
+  if (SFX_ADAFRUIT) {
+    //serial_print("Stop playing Adafruit device");
+    sfx->stop();
+  } else {
     //serial_print("Stop playing JQ6500 device");
     jfx->pause();
+  }  
 }

@@ -8,7 +8,7 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
-#define VERSION "0.8.6"
+#define VERSION "0.8.7"
 
 // Set monitor baud rate
 #define SERIAL_RATE 115200
