@@ -20,6 +20,11 @@ int T8 = T6 + DELAY_DROP_TONE_FINAL_MS;
 #if SHORT_PULSE_GATE
 int target[] = {T0, T1, T2, T3, T4, T5, T6, T7, T8};
 uint8_t count = 9;
+
+// column numbers 0=lighttree, 1=audiotone, 2=gatedrop
+// column types int, bool, bool
+// if -1 ignore
+
 int seq[][3] = { 
   { 1, 1,-1},
   {-1, 0,-1},
@@ -110,11 +115,12 @@ void Sequence::begin_sequence() {
   offset = millis();
   
   while((step < count) && (!gate->is_aborted())) {
-    
+
+    // a tight loop that waits the target amount of time
     while (target[step] > now) {
       now = millis() - offset;
     }
-
+    
     for (int i=0; i<3; i++){
       val = seq[step][i];
       // -1 means ignore

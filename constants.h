@@ -13,9 +13,6 @@
 // Set monitor baud rate
 #define SERIAL_RATE 115200
 
-// Set monitor baud rate
-#define SERIAL_RATE 115200
-
 // Light tree 
 #define LIGHT_TREE_RELAY_ENABLE 1 // set to 1 for RELAY operation
 #if LIGHT_TREE_RELAY_ENABLE
@@ -23,8 +20,8 @@
 #endif
 #define LIGHT_TREE_STRIP 1     // set to 1 for Strip type LEDS eg Neopixel
 #if LIGHT_TREE_STRIP
-#define NUM_LEDS    8        // how many LEDs do you have?
-#define BRIGHTNESS  10       // 255 is max bright
+#define NUM_LEDS    8         // how many LEDs you have, min is 4, multiples of 4 is best
+#define BRIGHTNESS  10      // 255 is max bright.
 #define LED_TYPE    WS2812   // WS2812B for genuine NeoPixel
 #define COLOR_ORDER GRB      // RGB for genuine NeoPixel
 #endif

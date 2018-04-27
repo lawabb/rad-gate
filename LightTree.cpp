@@ -9,6 +9,7 @@
 
 #if LIGHT_TREE_STRIP
 CRGB leds[NUM_LEDS];
+int team_size = NUM_LEDS/4;  //  no of LEDS in each color
 #endif
 
 LightTree::LightTree() { }
@@ -38,7 +39,7 @@ void LightTree::led_reset() {
     digitalWrite(PIN_LIGHT_TREE_RELAY_4, !LIGHT_TREE_RELAY_ON);
   #endif
   #if (LIGHT_TREE_STRIP)
-    for(int i=0;i<8;i++) {
+    for(int i=0;i<NUM_LEDS;i++) {
       leds[i] = CRGB::Black;
     }
     FastLED.show();
@@ -53,7 +54,7 @@ void LightTree::abort() {
     digitalWrite(PIN_LIGHT_TREE_RELAY_4, !LIGHT_TREE_RELAY_ON); 
   #endif
   #if (LIGHT_TREE_STRIP)
-    for(int i=0;i<8;i++) {
+    for(int i=0;i<NUM_LEDS;i++) {
         leds[i] = CRGB::Red;
     }
     FastLED.show();
@@ -97,26 +98,38 @@ void LightTree::light_set(int step) {
     }
   #endif
   #if (LIGHT_TREE_STRIP)
-    switch (step) {
-      case 1:
-        leds[6] = CRGB::Red;
-        leds[7] = CRGB::Red;
-        break;
-      case 2:
-        leds[4] = CRGB::Orange;
-        leds[5] = CRGB::Orange;    
-        break;
-      case 3:
-        leds[2] = CRGB::Orange;
-        leds[3] = CRGB::Orange;
-        break;
-      case 4:
-        leds[0] = CRGB::Green;
-        leds[1] = CRGB::Green;
-        break;
-      default:
-        led_reset();
-    }
+  
+      int position = 4-step;    // bottom of strip up
+      // int position = step-1; // top of strip down
+       
+      switch (step) {       
+        case 1:
+          // set team Red LEDs
+          for(int i=0;i<team_size;i++) {
+            leds[i+position*team_size] = CRGB::Red;
+          }
+          break; 
+        case 2:
+          // set team Orange LEDs
+          for(int i=0;i<team_size;i++) {
+            leds[i+position*team_size] = CRGB::Orange;
+          }
+          break;
+        case 3:
+          // set 2nd team Orange LEDs 
+          for(int i=0;i<team_size;i++) {
+            leds[i+position*team_size] = CRGB::Orange;
+          }
+          break;
+        case 4:
+          //set team Green LEDs
+          for(int i=0;i<team_size;i++) {
+            leds[i+position*team_size] = CRGB::Green;
+          }
+          break;
+        default:
+          led_reset();
+      }
   FastLED.show();
   #endif
 }
