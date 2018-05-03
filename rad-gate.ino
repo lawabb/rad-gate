@@ -79,7 +79,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt0, HIGH);
   
   // Use Interrupt1 from light beam trigger input for reaction time measurement
-  attach_interrupt1();
+  // attach_interrupt1(); // Attaching in main loop()
 
   // ensure solenoid or magnet is in default condition
   digitalWrite(PIN_RELAY, !GATE_ACTIVE_LEVEL);
@@ -129,7 +129,7 @@ void Interrupt1()
 }
 
 void attach_interrupt1() {
-  attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), Interrupt1, LOW);
+  attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), Interrupt1, RISING);
 }
 
 void loop()
