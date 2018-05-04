@@ -8,10 +8,14 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
-#define VERSION "0.8.7"
+#define VERSION "0.8.8"
 
 // Set monitor baud rate
 #define SERIAL_RATE 115200
+
+// Display
+// Comment out if not required
+#define SEVEN_SEG_DISPLAY
 
 // Light tree 
 #define LIGHT_TREE_RELAY_ENABLE 1 // set to 1 for RELAY operation
@@ -21,12 +25,12 @@
 #define LIGHT_TREE_STRIP 1     // set to 1 for Strip type LEDS eg Neopixel
 #if LIGHT_TREE_STRIP
 #define NUM_LEDS    8         // how many LEDs you have, min is 4, multiples of 4 is best
-#define BRIGHTNESS  10      // 255 is max bright.
+#define BRIGHTNESS  100      // 255 is max bright.
 #define LED_TYPE    WS2812   // WS2812B for genuine NeoPixel
 #define COLOR_ORDER GRB      // RGB for genuine NeoPixel
 #endif
 
-// sound player
+// Sound player
 // uncomment if using Adafruit sound fx boards
 //#define HARDWARE_SOUNDBOARD_ADAFRUIT
 // or uncomment "JQ6500" if using the cheap and friendly Aliexpress JQ6500
@@ -52,24 +56,37 @@
 #define TONE_ABORT_2_HZ 680
 
 // Pin assignments for UNO
+#ifdef HARDWARE_SOUNDBOARD_ADAFRUIT
 #define PIN_SFX_RST 0            // Adafruit sound board reset
 #define PIN_SFX_ACT 1            // Adafruit sound board active
+#endif
 #define PIN_BUTTON_GO 2          // The GO/ABORT button;  interrupt0
 #define PIN_SENSOR 3             // light beam switch/sensor; interrupt1
 #define PIN_LED_ACTIVE 4         //  GO button is activated LED
+
+#ifdef SEVEN_SEG_DISPLAY
 #define PIN_DISPLAY_DATA 5       // 4 digit seven seg LED display -> DS
 #define PIN_DISPLAY_LATCH 6      // 4 digit seven seg LED display -> ST_CP
 #define PIN_DISPLAY_CLOCK 7      // 4 digit seven seg LED display -> SH_CP
+#endif
 #define PIN_RELAY 8              // relay, or MOSFET for GATE
 #define PIN_SFX_RX 9             // sound board receive (Arduino Tx) 
 #define PIN_SFX_TX 10            // sound board transmit (Arduino Rx)
 #define PIN_SPEAKER 11           // tone output
-//#define  12      
+
+#define PIN_SETUP 12                   // enter setup mode
+
+#if LIGHT_TREE_STRIP
 #define PIN_LED 13               // light tree serial data
+#endif
+
+#if LIGHT_TREE_RELAY_ENABLE
 #define PIN_LIGHT_TREE_RELAY_1 14  // Red LED
 #define PIN_LIGHT_TREE_RELAY_2 15  // Orange LED
 #define PIN_LIGHT_TREE_RELAY_3 16  // Orange LED 
 #define PIN_LIGHT_TREE_RELAY_4 17  // Green LED
+#endif
+
 #define PIN_BAT_MON 18           // Analogue Input to measure battery voltage
 #define PIN_ANA_VIN 19           // For random seed for random delay
 

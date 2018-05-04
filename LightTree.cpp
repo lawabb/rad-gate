@@ -17,7 +17,7 @@ LightTree::LightTree() { }
 void LightTree::initialise() { 
   #if (LIGHT_TREE_STRIP)
     serial_print("Init Light Strip");
-    delay( 3000 ); // power-up safety delay
+    delay(2000); // power-up safety delay
     FastLED.addLeds<LED_TYPE, PIN_LED, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
     FastLED.show();
     FastLED.setBrightness(BRIGHTNESS); 

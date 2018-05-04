@@ -14,6 +14,7 @@
 class Sequence {
 
   public:
+    Sequence(Gate* gateOb, AudioFX* audioOb, LightTree* lighttreeOb);
     Sequence(Gate* gateOb, AudioFX* audioOb, LightTree* lighttreeOb, Display* displayOb);
     void begin_sequence();
     void abort_seq();

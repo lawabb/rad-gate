@@ -71,8 +71,13 @@ sfx_map sfx_maps[] =  {
   {'.', SFX_POINT}, 
   };
 
-Sequence::Sequence(Gate* gateOb, AudioFX* audioOb, LightTree* lighttreeOb, Display* displayOb) {
+Sequence::Sequence(Gate* gateOb, AudioFX* audioOb, LightTree* lighttreeOb) {
+  gate = gateOb;
+  audio = audioOb;
+  lighttree = lighttreeOb;
+}
 
+Sequence::Sequence(Gate* gateOb, AudioFX* audioOb, LightTree* lighttreeOb, Display* displayOb) {
   gate = gateOb;
   audio = audioOb;
   lighttree = lighttreeOb;
@@ -88,7 +93,9 @@ void Sequence::begin_sequence() {
   volatile uint32_t react_time;
 
   serial_print("Sequence begin");
-  display->allOff();
+  #ifdef SEVEN_SEG_DISPLAY
+    display->allOff();
+  #endif
   gate->set_sequence_running(true);
 
   // digitalWrite(LED_BUILTIN, HIGH);  // turn on builtin LED. Note: also turns on Neo Pixel LED 0 green!
@@ -199,7 +206,9 @@ void Sequence::end_seq(volatile uint32_t react_time) {
   int n = s.length();
 
   // Write react time to seven segment display
-  display-> displayNumber(react_time, 1, n-4); // n-4 gives which digit dp is attached to
+  #ifdef SEVEN_SEG_DISPLAY
+    display-> displayNumber(react_time, 1, n-4); // n-4 gives which digit dp is attached to
+  #endif
   
   char char_array[n+1]; 
   strcpy(char_array, s.c_str());

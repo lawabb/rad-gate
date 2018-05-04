@@ -26,23 +26,29 @@ bool do_end_seq = false;
 uint32_t interrupt1_time = 0;
 uint32_t lastButtonPress = 0;
 int vdig = 0;
+bool SETUP;
 
 
 Gate gate = Gate();
+LightTree lighttree = LightTree();
 
 #ifdef HARDWARE_SOUNDBOARD_ADAFRUIT
   SoftwareSerial ss = SoftwareSerial(PIN_SFX_TX, PIN_SFX_RX);
   Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, PIN_SFX_RST);
-  AudioFX audioFX = AudioFX(&sfx);
+  AudioFX audioFX = AudioFX(&sfx, &gate);
 #endif
 #ifdef HARDWARE_SOUNDBOARD_JQ6500
   JQ6500_Serial mp3(PIN_SFX_TX, PIN_SFX_RX);
   AudioFX audioFX = AudioFX(&mp3, &gate);
 #endif
 
-LightTree lighttree = LightTree();
-Display display = Display();
-Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
+#ifdef SEVEN_SEG_DISPLAY
+  Display display = Display();
+  Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
+#else
+  Sequence sequence = Sequence(&gate, &audioFX, &lighttree);
+#endif
+  
 
 
 void setup() 
@@ -71,6 +77,17 @@ void setup()
   pinMode(PIN_ANA_VIN, INPUT);
   pinMode(PIN_BAT_MON, INPUT);
   pinMode(PIN_SENSOR, INPUT_PULLUP);
+  pinMode(PIN_SETUP, INPUT_PULLUP);
+
+  // momentary switch connected to PIN_SETUP 
+  // when held down during startup, starts setup mode
+  // for light bean alignment
+  
+  if (digitalRead(PIN_SETUP)== LOW) {
+    SETUP = true;
+  } else {
+    SETUP = false;
+  }
 
   // Add more randomness otherwise uses same random sequence on each startup
   randomSeed(analogRead(PIN_ANA_VIN));
@@ -81,7 +98,7 @@ void setup()
   // Use Interrupt1 from light beam trigger input for reaction time measurement
   // attach_interrupt1(); // Attaching in main loop()
 
-  // ensure solenoid or magnet is in default condition
+  // ensure solenoid or magnet is in default idle condition
   digitalWrite(PIN_RELAY, !GATE_ACTIVE_LEVEL);
   
   lighttree.initialise();
@@ -89,13 +106,21 @@ void setup()
 
   // 4 digit LED display
   //set pins to output
-  pinMode(PIN_DISPLAY_LATCH, OUTPUT);
-  pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
-  pinMode(PIN_DISPLAY_DATA, OUTPUT); 
+  #ifdef SEVEN_SEG_DISPLAY
+    pinMode(PIN_DISPLAY_LATCH, OUTPUT);
+    pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
+    pinMode(PIN_DISPLAY_DATA, OUTPUT); 
 
-  // Display start message " rAd"
-  uint8_t nameArray[] = {11, 13, 14, 15};
-  display.setDisplay(nameArray, 0, 4);
+    if (SETUP) { 
+      // Display setup start message "SEt    "  
+      uint8_t nameArray[] = {5, 16, 17, 11 };
+      display.setDisplay(nameArray, 0, 4);      
+    } else {
+      // Display start message " rAd"
+      uint8_t nameArray[] = {11, 13, 14, 15};
+      display.setDisplay(nameArray, 0, 4);
+    }   
+  #endif
 
   // Play 'ready to roll' tones
   audioFX.play_power_on();
@@ -134,55 +159,74 @@ void attach_interrupt1() {
 
 void loop()
 {
-  if (digitalRead(PIN_BUTTON_GO) == LOW) {
-    //serial_print("LOW");
-    buttonPressed = 0; // reset
-  }
-  else if (digitalRead(PIN_BUTTON_GO) == HIGH) {
-    serial_print("GO!");
-    if (!buttonPressed) {
-      buttonPressed = 1;
-      lastButtonPress = millis();
-      // serial_print_val("Sequence start - lastButtonPress val", lastButtonPress);
-      FLAG_GATE_DOWN = false;
-      got_interrupt1 = false;
-      attach_interrupt1();
-      sequence.begin_sequence();
+  if (SETUP) {
+
+    // Battery monitor setup
+    /*
+    TODO
+    */
+    // Light beam setup
+    if (digitalRead(PIN_SENSOR) == LOW) {   
+      tone(PIN_SPEAKER, 700, 100);
+    } else {
+      tone(PIN_SPEAKER, 1000, 100);
     }
-  }
-
-  // optionally get 'reaction time' value
-  if (do_end_seq) {
-    do_end_seq = false;
-    sequence.end_seq(interrupt1_time - GATE_DROP_START);
-  }
-
-  // Battery monitor
-  // Checks the voltage and if too low gives alarm
-  // Set jumper on board to 5V to stop alarms while testing
-  // Using 100K:10K voltage divider on IP giving  Vin = Vdc/11
-  // Trim the 100K value for accuracy - I used 82K + 50K trimpot
-  // Battery Alarm is set at Voltage (mV) BAT_ALARM_VOLTS
- 
-  vdig = analogRead(PIN_BAT_MON);
-  // serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023); 
-  // delay(1000);  // add some delay when testing
-  
-  while (vdig < 1.023*BAT_ALARM_VOLTS/55) {    
-      serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023);
-      
-      if (vdig*55.0/1.023 < 10000) {
-        display.displayNumber(vdig*55.0/1.023, 1, 1); //  DP for numbers < 10.00
-      } else {
-        display.displayNumber(vdig*55.0/1.023, 0, 2); //  DP for numbers > 10.00      
+    
+  } else {   
+    // Non setup stuff
+    
+    // Check 'GO' button status
+    if (digitalRead(PIN_BUTTON_GO) == LOW) {
+      //serial_print("LOW");
+      buttonPressed = 0; // reset
+    }
+    else if (digitalRead(PIN_BUTTON_GO) == HIGH) {
+      serial_print("GO!");
+      if (!buttonPressed) {
+        buttonPressed = 1;
+        lastButtonPress = millis();
+        // serial_print_val("Sequence start - lastButtonPress val", lastButtonPress);
+        FLAG_GATE_DOWN = false;
+        got_interrupt1 = false;
+        attach_interrupt1();
+        sequence.begin_sequence();
       }
+    }
   
-      audioFX.stop_play();
-      delay(500);
-      audioFX.play_sound_sample(SFX_LOW_BAT_ALM);
-      delay(5000);
-      display.allOff();
-      vdig = analogRead(PIN_BAT_MON);
-      
+    // optionally get 'reaction time' value
+    if (do_end_seq) {
+      do_end_seq = false;
+      sequence.end_seq(interrupt1_time - GATE_DROP_START);
+    }
+   
+    // Continuos Battery monitor
+    // Checks the voltage and if too low gives alarm
+    // Set jumper on board to 5V to stop alarms while testing
+    // Using 100K:10K voltage divider on IP giving  Vin = Vdc/11
+    // Trim the 100K value for accuracy - I used 82K + 50K trimpot
+    // Battery Alarm is set at Voltage (mV) BAT_ALARM_VOLTS
+   
+    vdig = analogRead(PIN_BAT_MON);
+    // serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023); 
+    // delay(1000);  // add some delay when testing
+    
+    while (vdig < 1.023*BAT_ALARM_VOLTS/55) {    
+        serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023);
+  
+        #ifdef SEVEN_SEG_DISPLAY
+          if (vdig*55.0/1.023 < 10000) {
+            display.displayNumber(vdig*55.0/1.023, 1, 1); //  DP for numbers < 10.00
+          } else {
+            display.displayNumber(vdig*55.0/1.023, 0, 2); //  DP for numbers > 10.00      
+          }
+        #endif
+    
+        audioFX.stop_play();
+        delay(500);
+        audioFX.play_sound_sample(SFX_LOW_BAT_ALM);
+        delay(5000);
+        display.allOff();
+        vdig = analogRead(PIN_BAT_MON);  
+    }
   }
 }

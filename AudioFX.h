@@ -13,7 +13,7 @@
 class AudioFX {
 
   public:
-    AudioFX(Adafruit_Soundboard *sbref);
+    AudioFX(Adafruit_Soundboard *sbref, Gate *gateObj);
     AudioFX(JQ6500_Serial *jref, Gate *gateObj);
     void start_tone(int hz);
     void stop_tone();

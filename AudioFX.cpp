@@ -23,8 +23,9 @@ uint32_t now;
 uint32_t wait_time;
 
 
-AudioFX::AudioFX(Adafruit_Soundboard *sbref) {
+AudioFX::AudioFX(Adafruit_Soundboard *sbref, Gate* gateObj) {
   sfx = sbref;
+  gate = gateObj;
 }
 
 AudioFX::AudioFX(JQ6500_Serial *jref, Gate* gateObj) {
@@ -90,27 +91,25 @@ void AudioFX::play_abort() {
 }
 
 void AudioFX::play_sample(uint8_t track) {
-  if (SFX_ADAFRUIT) {
+  #if (SFX_ADAFRUIT)
     //serial_print("SFX playing on Adafruit device");
     sfx->playTrack(track);
     delay(50);
     while (digitalRead(PIN_SFX_ACT) == LOW) {
       // wait for sample to finish
     }
-  }
-  else
-  {
+  #else
     // serial_print("SFX playing on JQ6500 device");
     jfx->playFileByIndexNumber(track);
-  }
+  #endif
 }
 
 void AudioFX::stop_play() {
-  if (SFX_ADAFRUIT) {
+  #if (SFX_ADAFRUIT)
     //serial_print("Stop playing Adafruit device");
     sfx->stop();
-  } else {
+  #else 
     //serial_print("Stop playing JQ6500 device");
     jfx->pause();
-  }  
+  #endif 
 }
