@@ -42,13 +42,8 @@ LightTree lighttree = LightTree();
   AudioFX audioFX = AudioFX(&mp3, &gate);
 #endif
 
-#ifdef SEVEN_SEG_DISPLAY
-  Display display = Display();
-  Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
-#else
-  Sequence sequence = Sequence(&gate, &audioFX, &lighttree);
-#endif
-  
+Display display = Display();
+Sequence sequence = Sequence(&gate, &audioFX, &lighttree, &display);
 
 
 void setup() 
@@ -79,54 +74,50 @@ void setup()
   pinMode(PIN_SENSOR, INPUT_PULLUP);
   pinMode(PIN_SETUP, INPUT_PULLUP);
 
-  // momentary switch connected to PIN_SETUP 
-  // when held down during startup, starts setup mode
-  // for light bean alignment
-  
+
+  // 4 digit LED display (if defined)
+  // set pins to output
+  pinMode(PIN_DISPLAY_LATCH, OUTPUT);
+  pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
+  pinMode(PIN_DISPLAY_DATA, OUTPUT); 
+
+  //  switch connected to PIN_SETUP 
+  // when LOW enters setup mode
+  // used for light beam alignment
   if (digitalRead(PIN_SETUP)== LOW) {
-    SETUP = true;
+    SETUP = true;   
+    // Display setup start message "SEt    "  
+    uint8_t nameArray[] = {5, 16, 17, 11 };
+    display.setDisplay(nameArray, 0, 4);
+
   } else {
     SETUP = false;
+ 
+    // Add more randomness otherwise uses same random sequence on each startup
+    randomSeed(analogRead(PIN_ANA_VIN));
+  
+    // Use interrupt0 to catch ABORT request from GO button
+    attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt0, HIGH);
+    
+    // Use Interrupt1 from light beam trigger input for reaction time measurement
+    // attach_interrupt1(); // Attaching in main loop()
+  
+    // ensure solenoid or magnet is in default idle condition
+    digitalWrite(PIN_RELAY, !GATE_ACTIVE_LEVEL);
+    
+    lighttree.initialise();
+    lighttree.ready();
+  
+    // Display start message " rAd"
+    uint8_t nameArray[] = {11, 13, 14, 15};
+    display.setDisplay(nameArray, 0, 4);
+    
+    // Play 'ready to roll' tones
+    audioFX.play_power_on();
+    
+    //serial_print("Initialised");
+    serial_print("Waiting for GO Button..");
   }
-
-  // Add more randomness otherwise uses same random sequence on each startup
-  randomSeed(analogRead(PIN_ANA_VIN));
-
-  // Use interrupt0 to catch ABORT request from GO button
-  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_GO), Interrupt0, HIGH);
-  
-  // Use Interrupt1 from light beam trigger input for reaction time measurement
-  // attach_interrupt1(); // Attaching in main loop()
-
-  // ensure solenoid or magnet is in default idle condition
-  digitalWrite(PIN_RELAY, !GATE_ACTIVE_LEVEL);
-  
-  lighttree.initialise();
-  lighttree.ready();
-
-  // 4 digit LED display
-  //set pins to output
-  #ifdef SEVEN_SEG_DISPLAY
-    pinMode(PIN_DISPLAY_LATCH, OUTPUT);
-    pinMode(PIN_DISPLAY_CLOCK, OUTPUT);
-    pinMode(PIN_DISPLAY_DATA, OUTPUT); 
-
-    if (SETUP) { 
-      // Display setup start message "SEt    "  
-      uint8_t nameArray[] = {5, 16, 17, 11 };
-      display.setDisplay(nameArray, 0, 4);      
-    } else {
-      // Display start message " rAd"
-      uint8_t nameArray[] = {11, 13, 14, 15};
-      display.setDisplay(nameArray, 0, 4);
-    }   
-  #endif
-
-  // Play 'ready to roll' tones
-  audioFX.play_power_on();
-  
-  //serial_print("Initialised");
-  serial_print("Waiting for GO Button..");
 }
 
 void Interrupt0()
@@ -157,23 +148,40 @@ void attach_interrupt1() {
   attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), Interrupt1, RISING);
 }
 
+void softReset() {
+  asm volatile ("  jmp 0");
+}
+
 void loop()
 {
   if (SETUP) {
+  // setup mode  allows easier alignment of light beam by using audio tones
+  // (alternatively,monitor a LED connected to PIN_SENSOR)
+  // #TODO Battery check
 
-    // Battery monitor setup
-    /*
-    TODO
-    */
     // Light beam setup
+    // Display setup start message "SEt    "  
+    uint8_t nameArray[] = {5, 16, 17, 11 };
+    display.setDisplay(nameArray, 0, 4);
+
     if (digitalRead(PIN_SENSOR) == LOW) {   
       tone(PIN_SPEAKER, 700, 100);
     } else {
       tone(PIN_SPEAKER, 1000, 100);
     }
-    
+    // when setup done, cancel setup mode and reset
+    if (digitalRead(PIN_SETUP)== HIGH) {
+      SETUP = false;
+      noTone(PIN_SPEAKER);
+      softReset();
+    }   
   } else {   
-    // Non setup stuff
+  // Normal loop operation
+  
+    // Enter setup mode
+    if (digitalRead(PIN_SETUP)== LOW) {
+      SETUP = true;
+    }
     
     // Check 'GO' button status
     if (digitalRead(PIN_BUTTON_GO) == LOW) {
@@ -212,15 +220,11 @@ void loop()
     
     while (vdig < 1.023*BAT_ALARM_VOLTS/55) {    
         serial_print_val("Battery volatage is (mV)", vdig*55.0/1.023);
-  
-        #ifdef SEVEN_SEG_DISPLAY
-          if (vdig*55.0/1.023 < 10000) {
-            display.displayNumber(vdig*55.0/1.023, 1, 1); //  DP for numbers < 10.00
-          } else {
-            display.displayNumber(vdig*55.0/1.023, 0, 2); //  DP for numbers > 10.00      
-          }
-        #endif
-    
+        if (vdig*55.0/1.023 < 10000) {
+          display.displayNumber(vdig*55.0/1.023, 1, 1); //  DP for numbers < 10.00
+        } else {
+          display.displayNumber(vdig*55.0/1.023, 0, 2); //  DP for numbers > 10.00      
+        }
         audioFX.stop_play();
         delay(500);
         audioFX.play_sound_sample(SFX_LOW_BAT_ALM);

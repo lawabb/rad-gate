@@ -8,14 +8,10 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
-#define VERSION "0.8.8"
+#define VERSION "0.8.9"
 
 // Set monitor baud rate
 #define SERIAL_RATE 115200
-
-// Display
-// Comment out if not required
-#define SEVEN_SEG_DISPLAY
 
 // Light tree 
 #define LIGHT_TREE_RELAY_ENABLE 1 // set to 1 for RELAY operation
@@ -64,11 +60,10 @@
 #define PIN_SENSOR 3             // light beam switch/sensor; interrupt1
 #define PIN_LED_ACTIVE 4         //  GO button is activated LED
 
-#ifdef SEVEN_SEG_DISPLAY
 #define PIN_DISPLAY_DATA 5       // 4 digit seven seg LED display -> DS
 #define PIN_DISPLAY_LATCH 6      // 4 digit seven seg LED display -> ST_CP
 #define PIN_DISPLAY_CLOCK 7      // 4 digit seven seg LED display -> SH_CP
-#endif
+
 #define PIN_RELAY 8              // relay, or MOSFET for GATE
 #define PIN_SFX_RX 9             // sound board receive (Arduino Tx) 
 #define PIN_SFX_TX 10            // sound board transmit (Arduino Rx)
