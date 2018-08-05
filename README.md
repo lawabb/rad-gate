@@ -17,7 +17,7 @@ by a solenoid rather than an electromagnet
 6. Change to FastLED library to simpify options of LightTree
 7. Added 'randomness' to prevent same random sequence on each start up
 
-Major Hardware
+Major Hardware Components.
 
 1. Arduino UNO R3 (Others should work)
 2. Arduino UNO sheild - or some circuit board to mount everything on
