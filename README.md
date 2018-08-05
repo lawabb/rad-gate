@@ -1,7 +1,7 @@
 # rad-gate
 Arduino powered BMX gate controller with spoken cadence and random start
 
-Main changes from dfrencham/rad-gate project are:
+Main changes from dfrencham/rad-gate project (Thank you Danny for sharing your code) are:
 
 1. "Reaction time" function. This produces a voice message and readout of time from 
 gate drop to front wheel tripping the reaction time sensor. ( An IR light beam in my case)
@@ -12,7 +12,7 @@ https://tronixlabs.com.au/display/led/numeric/four-digit-seven-segment-display-m
 for more information on the display
 3. Option to configure gate activation polarity, and option to provide a short pulse for gate activation eg as is required
 by a solenoid rather than an electromagnet
-4. Some rewtite of timing code to incorporate the above and adhere to UCI timing document.
+4. Some rewrite of timing code to incorporate the above and adhere to UCI timing document.
 5. Alter "abort" code to indicate and prevent progress of sequence asap
 6. Change to FastLED library to simpify options of LightTree
 7. Added 'randomness' to prevent same random sequence on each start up
@@ -31,4 +31,7 @@ Major Hardware
 9. Options for Light Tree - Serial eg Neopixel or similar  (search WS2812 Aliexpress) or Individual (4) outputs
 
 
+Additional information on using E30-R4NA sensor.
+The E30-R4NA Infra Red Tx/Rx unit is relatively cheap and works up to a range of about 2.5m from my tests. It does however require some additional hardware to effectively narrow the beam so that a narrow bmx tyre will interrupt the beam sufficiently to trigger the receive circuit. I have done this by mounting the module in a 170mm length of 40mm diameter PVC water pipe as follows.
 
+![IR Sensor stands](doc/IR_sensor_stands.jpg)
