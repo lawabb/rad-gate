@@ -38,3 +38,5 @@ The E30-R4NA Infra Red Tx/Rx unit is relatively cheap and works up to a range of
 ![IR Sensor stands](doc/IR_sensor_stands.jpg)
 
 To setup the sensor,  the Tx/Rx unit must be accurately pointed and aligned with a reflector unit. To make this easier you can change the normal mode of operation of the controller to 'setup mode' by closing a switch connected to D12 of the Arduino. Once the setup mode is started, a continuous tone will be heard. Move the reflector and/or the tx/rx unit until the lower tone of the two tones is reliably heard. Test that interupting the beam with a sufficiently narrow object such as a broom handle causes the tone to change to a higher pitched tone during the interrption period. When satisfied with the alignment and position return the 'setup mode' switch to the normal position. The controller will then reset back to normal operation.
+
+[Video of Controller](https://youtu.be/LeO_OOp3VB0)
